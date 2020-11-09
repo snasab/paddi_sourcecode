@@ -1,20 +1,28 @@
 SUBROUTINE read_parameter(restarted)
-!+-----------------------------------------------------------------------+
-!| The code solves the following equations:                              |
-!|                                                                       |
-!| du                                                                    |
-!| -- = - \nabla P + D_visc \nabla^2 u + B_therm T e_z - B_comp C e_z    |
-!| dt                                                                    |
-!|                                                                       |
-!| dT                                                                    |
-!| -- = D_therm \nabla^2 T - S_therm w                                   |
-!| dt                                                                    |
-!|                                                                       |
-!| dC                                                                    |
-!| -- = D_comp \nabla^2 C - S_comp w                                     |
-!| dt                                                                    |
-!|                                                                       |
-!| \nabla * u = 0                                                        |
+!+----------------------------------------------------------------------------------------------+
+!| The code solves the following equations:                              						|
+!|                                                                       						|
+!| Du                                                                    						|
+!| -- = - \nabla P + D_visc \nabla^2 u + B_therm T e_z - B_comp C e_z + R_part ((u_p - u)/T_part)*r   	|
+!| Dt         																					|
+!|																								|
+!| Du_p                                                                    						|
+!| ---- = (u_p - u)/T_part - G_part e_z   + Dv_part \nabla^2 up														|
+!| Dt                                                                    						|
+!|                                                                       						|
+!| DT                                                                    						|
+!| -- = D_therm \nabla^2 T - S_therm w                                   						|
+!| Dt                                                                    						|
+!|                                                                       						|
+!| DC                                                                    						|
+!| -- = D_comp \nabla^2 C - S_comp w                                     						|
+!| Dt      																						|
+!|                                                                       						|
+!| dr                                                                    						|
+!| -- = - div (u_p r) +  D_part \nabla^2 r - S_part (u_p e_z)                                   |					
+!| dt                                                                     						|
+!|                                                                       						|
+!| \nabla * u = 0                                                        +----------------------+
 !|                                                                       |
 !| in a triply periodic cube.                                            |
 !|                                                                       |
@@ -22,10 +30,15 @@ SUBROUTINE read_parameter(restarted)
 !|                                                                       |
 !|   B_therm, B_comp represent the coefficients in fromt of the buoyancy |
 !|                   terms;                                              |
-!|   D_visc,D_therm,D_comp are the viscous, thermal and compositional    |
-!|                   diffusion parameters;                               |
-!|   S_therm, S_comp are the coefficients resulting from the background  |
-!|                   stratification.                                     |
+!|   D_visc,D_therm,D_comp,D_part are the viscous,thermal,compositional, |
+!|                   particulate diffusion parameters;                   |
+!|   S_therm, S_comp, S_part are the coefficients resulting from the     |
+!|                   background stratification;  		         |
+!|   T_part represents the stopping time parameter;			 |
+!|	 G_part represents the gravity parameter.			 |
+!|   R_part scales the drag term accordingly.                            |
+!|   Dv_part is the particle viscous diffusion parameter in particle     |
+!|       momentum equation.                                              |
 !|                                                                       |
 !| Implementing the algorithm for these general equations has the        |
 !| advantage that switching between different non-dimensionalizations    |
@@ -37,10 +50,10 @@ SUBROUTINE read_parameter(restarted)
 !| namelist entries can be specified by the user:                        |
 !|                                                                       |
 !| Restart_from_dumped_data (logical):                                   |
-!|            True if current run should be startet from saved           |
+!|            True if current run should be started from saved           |
 !|            restart data. False otherwise.                             |
 !| Restart_from_netCDF_output_file(logical):                             |
-!|            True if current run should be startet from                 |
+!|            True if current run should be started from                 |
 !|            a netcdf output file instead of a dedicated restart file.  |
 !| max_degree_of_x_fourier_modes (integer):                              |
 !|            Maximum degree of Fourier modes used for the               |
@@ -62,12 +75,27 @@ SUBROUTINE read_parameter(restarted)
 !|            The coefficient in front of the thermal diffusion term.    |
 !| Compositional_diffusion_coeff (real):                                 |
 !|            The coefficient in front of the compos. diffusion term.    |
+!| Particle_viscous_diffusion_coeff (real):	        		 |
+!|	      The coefficient in front of the particle diffusion term    |
+!|            in momentum equation.                                      |
+!| Particle_diffusion_coeff (real):                                      |
+!|            The coefficient in front of the particle diffusion term.   |
 !| Thermal_stratif_param (real):                                         |
 !|            The coefficient in front of the thermal stratification     |
 !|            advection term.                                            |
 !| Compositional_stratif_param (real):                                   |
 !|            The coefficient in front of the thermal stratification     |
 !|            advection term.                                            |
+!| Particle_stratif_param (real):                                        |
+!|            The coefficient in front of the particle stratification    |
+!|            advection term.                                            |
+!| Stopping_time_param (real):                                           |
+!|            The coefficient in front of the particle stopping time     |
+!|            coefficient in front of the drag term.                     |
+!| Gravity_param (real):                                                 |
+!|            The coefficient in front of the particle gravity term.     |
+!| Particle_scaling_coeff (real):    					 |
+!|            The coefficient in front of the drag term.                 |
 !| x_extent_of_the_box,y_extent_of_the_box,z_extent_of_the_box (real):   |
 !|            The governing equations are solved in the cube             |
 !|            [0,x_extent_of_the_box] x [0,y_extent_of_the_box] x        |
@@ -126,7 +154,7 @@ SUBROUTINE read_parameter(restarted)
 !|            to the file. We assume that the master node has enough     |
 !|            memory for this...                                         |
 !| write_state_to_netCDF_file (logical):                                 |
-!|            Determindes if the computed fields should be written       |
+!|            Determines if the computed fields should be written       |
 !|            to a netCDF file. The parallel netCDF library is used.     |
 !| Name_of_compressed_data_file (character (len=100)):                   |
 !|            The name of the file to which the computed fields are      |
@@ -142,7 +170,7 @@ SUBROUTINE read_parameter(restarted)
 !|            The name of the file to which vertically avaraged Fourier  |
 !|            spectra of various energies are written.                   |
 !| Name_of_vertical_spectra_file (character (len=100)):                  |
-!|            The name of the file to which the vertcial spectra of      |
+!|            The name of the file to which the vertical spectra of      |
 !|            the unknowns are written.                                  |
 !| Name_of_z_profile_file (character (len=100)):                         |
 !|            The name of the file to which vertical profiles are        |
@@ -197,6 +225,7 @@ SUBROUTINE read_parameter(restarted)
   INTEGER (kind=ki)  :: max_degree_of_y_fourier_modes
   INTEGER (kind=ki)  :: max_degree_of_z_fourier_modes
   LOGICAL            :: dealiasing = .TRUE.
+  LOGICAL            :: RandNum_using_myid = .TRUE. 
   REAL (kind=kr)     :: Thermal_buoyancy_param 
   REAL (kind=kr)     :: Compositional_buoyancy_param
   REAL (kind=kr)     :: Viscous_diffusion_coeff 
@@ -204,6 +233,12 @@ SUBROUTINE read_parameter(restarted)
   REAL (kind=kr)     :: Compositional_diffusion_coeff
   REAL (kind=kr)     :: Thermal_stratif_param
   REAL (kind=kr)     :: Compositional_stratif_param
+  REAL (kind=kr)     :: Stopping_time_param
+  REAL (kind=kr)     :: Gravity_param
+  REAL (kind=kr)     :: Particle_visc_diffusion_coeff
+  REAL (kind=kr)     :: Particle_diffusion_coeff
+  REAL (kind=kr)     :: Particle_stratif_param
+  REAL (kind=kr)     :: Particle_scaling_coeff
   REAL (kind=kr)     :: x_extent_of_the_box             = 2._kr*pi
   REAL (kind=kr)     :: y_extent_of_the_box             = 2._kr*pi
   REAL (kind=kr)     :: z_extent_of_the_box             = 2._kr*pi
@@ -241,6 +276,7 @@ SUBROUTINE read_parameter(restarted)
   NAMELIST /input_values/ max_degree_of_y_fourier_modes
   NAMELIST /input_values/ max_degree_of_z_fourier_modes
   NAMELIST /input_values/ dealiasing
+  NAMELIST /input_values/ RandNum_using_myid
   NAMELIST /input_values/ Thermal_buoyancy_param 
   NAMELIST /input_values/ Compositional_buoyancy_param
   NAMELIST /input_values/ Viscous_diffusion_coeff 
@@ -248,6 +284,12 @@ SUBROUTINE read_parameter(restarted)
   NAMELIST /input_values/ Compositional_diffusion_coeff
   NAMELIST /input_values/ Thermal_stratif_param
   NAMELIST /input_values/ Compositional_stratif_param
+  NAMELIST /input_values/ Stopping_time_param
+  NAMELIST /input_values/ Gravity_param
+  NAMELIST /input_values/ Particle_visc_diffusion_coeff
+  NAMELIST /input_values/ Particle_diffusion_coeff
+  NAMELIST /input_values/ Particle_stratif_param
+  NAMELIST /input_values/ Particle_scaling_coeff
   NAMELIST /input_values/ x_extent_of_the_box
   NAMELIST /input_values/ y_extent_of_the_box
   NAMELIST /input_values/ z_extent_of_the_box
@@ -303,6 +345,7 @@ SUBROUTINE read_parameter(restarted)
      in_dumpfile          =  Name_of_input_restart_file
      out_dumpfile         =  Name_of_output_restart_file
      jc_out               =  Name_of_compressed_data_file
+     rn_using_myid        =  RandNum_using_myid
      netCDF_simdat_file_name = Name_of_netCDF_data_file
      use_FFTW_wisdom_file =  Use_an_FFTW_wisdom_file
      FFTW_wisdom_file     =  Name_of_FFTW_wisdom_file
@@ -320,6 +363,12 @@ SUBROUTINE read_parameter(restarted)
      D_comp               = Compositional_diffusion_coeff
      S_therm              = Thermal_stratif_param
      S_comp               = Compositional_stratif_param
+     T_part               = Stopping_time_param
+     G_part               = Gravity_param
+     Dv_part              = Particle_visc_diffusion_coeff
+     D_part               = Particle_diffusion_coeff
+     S_part               = Particle_stratif_param
+     R_part               = Particle_scaling_coeff
      Gammax               = x_extent_of_the_box
      Gammay               = y_extent_of_the_box
      Gammaz               = z_extent_of_the_box
@@ -342,6 +391,7 @@ SUBROUTINE read_parameter(restarted)
   CALL MPI_BCAST(in_dumpfile           ,100, MPI_CHARACTER    ,0,MPI_COMM_WORLD,ierr)
   CALL MPI_BCAST(out_dumpfile          ,100, MPI_CHARACTER    ,0,MPI_COMM_WORLD,ierr)
   CALL MPI_BCAST(jc_out                ,100, MPI_CHARACTER    ,0,MPI_COMM_WORLD,ierr)
+  CALL MPI_BCAST(rn_using_myid         ,1,   MPI_LOGICAL      ,0,MPI_COMM_WORLD,ierr)
   CALL MPI_BCAST(use_FFTW_wisdom_file  ,1,   MPI_LOGICAL      ,0,MPI_COMM_WORLD,ierr)
   CALL MPI_BCAST(FFTW_wisdom_file      ,100, MPI_CHARACTER    ,0,MPI_COMM_WORLD,ierr)
   CALL MPI_BCAST(dt_max                ,1,PM_MPI_FLOAT_TYPE,0,MPI_COMM_WORLD,ierr)
@@ -359,6 +409,12 @@ SUBROUTINE read_parameter(restarted)
   CALL MPI_BCAST(D_comp                ,1,PM_MPI_FLOAT_TYPE,0,MPI_COMM_WORLD,ierr)
   CALL MPI_BCAST(S_therm               ,1,PM_MPI_FLOAT_TYPE,0,MPI_COMM_WORLD,ierr)
   CALL MPI_BCAST(S_comp                ,1,PM_MPI_FLOAT_TYPE,0,MPI_COMM_WORLD,ierr)
+  CALL MPI_BCAST(T_part                ,1,PM_MPI_FLOAT_TYPE,0,MPI_COMM_WORLD,ierr)
+  CALL MPI_BCAST(G_part                ,1,PM_MPI_FLOAT_TYPE,0,MPI_COMM_WORLD,ierr)
+  CALL MPI_BCAST(Dv_part               ,1,PM_MPI_FLOAT_TYPE,0,MPI_COMM_WORLD,ierr)
+  CALL MPI_BCAST(D_part                ,1,PM_MPI_FLOAT_TYPE,0,MPI_COMM_WORLD,ierr)
+  CALL MPI_BCAST(S_part                ,1,PM_MPI_FLOAT_TYPE,0,MPI_COMM_WORLD,ierr)
+  CALL MPI_BCAST(R_part                ,1,PM_MPI_FLOAT_TYPE,0,MPI_COMM_WORLD,ierr)
   CALL MPI_BCAST(Gammax                ,1,PM_MPI_FLOAT_TYPE,0,MPI_COMM_WORLD,ierr)
   CALL MPI_BCAST(Gammay                ,1,PM_MPI_FLOAT_TYPE,0,MPI_COMM_WORLD,ierr)
   CALL MPI_BCAST(Gammaz                ,1,PM_MPI_FLOAT_TYPE,0,MPI_COMM_WORLD,ierr)

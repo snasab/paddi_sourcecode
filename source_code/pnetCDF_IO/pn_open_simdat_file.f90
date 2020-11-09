@@ -67,7 +67,31 @@ SUBROUTINE pn_open_simdat_file
     CALL pn_check( nfmpi_def_var(ncid_simdat, "S_comp", NF_real,0,0,S_comp_varid_simdat) )
     CALL pn_check( nfmpi_put_att_text(ncid_simdat, S_comp_varid_simdat, 'long_name',    &
                  & INT(LEN('Compositional background stratification parameter'),kind=MPI_OFFSET_KIND), &
-                 &         'Compositional background stratification parameter')  )
+                 &         'Compositional background stratification parameter')  )		 
+    CALL pn_check( nfmpi_def_var(ncid_simdat, "T_part", NF_real,0,0,T_part_varid_simdat) )
+    CALL pn_check( nfmpi_put_att_text(ncid_simdat, T_part_varid_simdat, 'long_name',    &
+                 & INT(LEN('Stopping time parameter'),kind=MPI_OFFSET_KIND), &
+                 &         'Stopping time parameter')  )
+    CALL pn_check( nfmpi_def_var(ncid_simdat, "G_part", NF_real,0,0,G_part_varid_simdat) )
+    CALL pn_check( nfmpi_put_att_text(ncid_simdat, G_part_varid_simdat, 'long_name',    &
+                 & INT(LEN('Gravity parameter'),kind=MPI_OFFSET_KIND), &
+                 &         'Gravity parameter')  )
+    CALL pn_check( nfmpi_def_var(ncid_simdat, "Dv_part", NF_real,0,0,Dv_part_varid_simdat) )
+    CALL pn_check( nfmpi_put_att_text(ncid_simdat, Dv_part_varid_simdat, 'long_name',    &
+                 & INT(LEN('Particle viscous diffusion parameter'),kind=MPI_OFFSET_KIND), &
+                 &         'Particle viscous diffusion parameter')  )
+    CALL pn_check( nfmpi_def_var(ncid_simdat, "D_part", NF_real,0,0,D_part_varid_simdat) )
+    CALL pn_check( nfmpi_put_att_text(ncid_simdat, D_part_varid_simdat, 'long_name',    &
+                 & INT(LEN('Particle diffusion parameter'),kind=MPI_OFFSET_KIND), &
+                 &         'Particle diffusion parameter')  )
+    CALL pn_check( nfmpi_def_var(ncid_simdat, "S_part", NF_real,0,0,S_part_varid_simdat) )
+    CALL pn_check( nfmpi_put_att_text(ncid_simdat, S_part_varid_simdat, 'long_name',    &
+                 & INT(LEN('Particle background stratification parameter'),kind=MPI_OFFSET_KIND), &
+                 &         'Particle background stratification parameter')  )		
+    CALL pn_check( nfmpi_def_var(ncid_simdat, "R_part", NF_real,0,0,R_part_varid_simdat) )
+    CALL pn_check( nfmpi_put_att_text(ncid_simdat, R_part_varid_simdat, 'long_name',    &
+                 & INT(LEN('Particle scaling coefficient'),kind=MPI_OFFSET_KIND), &
+                 &         'Particle scaling coefficient')  )           
     CALL pn_check( nfmpi_def_var(ncid_simdat, "Gammax", NF_real,0,0,Gammax_varid_simdat) )
     CALL pn_check( nfmpi_put_att_text(ncid_simdat, Gammax_varid_simdat, 'long_name',  &
                  & INT(LEN('Dimensionless length of the box'),kind=MPI_OFFSET_KIND),  &
@@ -127,6 +151,7 @@ SUBROUTINE pn_open_simdat_file
     CALL pn_check( nfmpi_put_att_text(ncid_simdat, Chem_varid_simdat, 'long_name',  &
                  & INT(LEN('Concentration field'),kind=MPI_OFFSET_KIND),'Concentration field') ) 
 #endif
+
     CALL pn_check( nfmpi_def_var(ncid_simdat, "ux  ", NF_real,4,dimids,ux_varid_simdat) )
     CALL pn_check( nfmpi_put_att_text(ncid_simdat, ux_varid_simdat, 'long_name',  &
                  & INT(LEN('x-component of velocity field' ),kind=MPI_OFFSET_KIND),'x-component of velocity field')) 
@@ -136,6 +161,21 @@ SUBROUTINE pn_open_simdat_file
     CALL pn_check( nfmpi_def_var(ncid_simdat, "uz  ", NF_real,4,dimids,uz_varid_simdat) )
     CALL pn_check( nfmpi_put_att_text(ncid_simdat, uz_varid_simdat, 'long_name',  &
                  & INT(LEN('z-component of velocity field' ),kind=MPI_OFFSET_KIND),'z-component of velocity field'))
+
+#ifdef PARTICLE_FIELD
+	CALL pn_check( nfmpi_def_var(ncid_simdat, "Part", NF_real,4,dimids,Part_varid_simdat) )
+	CALL pn_check( nfmpi_put_att_text(ncid_simdat, Part_varid_simdat, 'long_name',  &
+				  & INT(LEN('Particle field'),kind=MPI_OFFSET_KIND),'Particle field') )
+	CALL pn_check( nfmpi_def_var(ncid_simdat, "upx  ", NF_real,4,dimids,upx_varid_simdat) )
+	CALL pn_check( nfmpi_put_att_text(ncid_simdat, upx_varid_simdat, 'long_name',  &
+			      & INT(LEN('x-component of particle velocity field' ),kind=MPI_OFFSET_KIND),'x-component of particle velocity field')) 
+	CALL pn_check( nfmpi_def_var(ncid_simdat, "upy  ", NF_real,4,dimids,upy_varid_simdat) )
+	CALL pn_check( nfmpi_put_att_text(ncid_simdat, upy_varid_simdat, 'long_name',  &
+			      & INT(LEN('y-component of particle velocity field' ),kind=MPI_OFFSET_KIND),'y-component of particle velocity field')) 
+	CALL pn_check( nfmpi_def_var(ncid_simdat, "upz  ", NF_real,4,dimids,upz_varid_simdat) )
+    CALL pn_check( nfmpi_put_att_text(ncid_simdat, upz_varid_simdat, 'long_name',  &
+			      & INT(LEN('z-component of particle velocity field' ),kind=MPI_OFFSET_KIND),'z-component of particle velocity field')) 
+#endif
 
 
     ! add global information 
@@ -167,6 +207,12 @@ SUBROUTINE pn_open_simdat_file
        CALL pn_check( PM_NFMPI_PUT_VAR_FLOAT(ncid_simdat,D_comp_varid_simdat,D_comp))
        CALL pn_check( PM_NFMPI_PUT_VAR_FLOAT(ncid_simdat,S_therm_varid_simdat,S_therm))
        CALL pn_check( PM_NFMPI_PUT_VAR_FLOAT(ncid_simdat,S_comp_varid_simdat,S_comp))
+       CALL pn_check( PM_NFMPI_PUT_VAR_FLOAT(ncid_simdat,T_part_varid_simdat,T_part))
+       CALL pn_check( PM_NFMPI_PUT_VAR_FLOAT(ncid_simdat,G_part_varid_simdat,G_part))
+       CALL pn_check( PM_NFMPI_PUT_VAR_FLOAT(ncid_simdat,Dv_part_varid_simdat,Dv_part))
+       CALL pn_check( PM_NFMPI_PUT_VAR_FLOAT(ncid_simdat,D_part_varid_simdat,D_part))
+       CALL pn_check( PM_NFMPI_PUT_VAR_FLOAT(ncid_simdat,S_part_varid_simdat,S_part))
+       CALL pn_check( PM_NFMPI_PUT_VAR_FLOAT(ncid_simdat,R_part_varid_simdat,R_part))
        CALL pn_check( PM_NFMPI_PUT_VAR_FLOAT(ncid_simdat,Gammax_varid_simdat,Gammax))
        CALL pn_check( PM_NFMPI_PUT_VAR_FLOAT(ncid_simdat,Gammay_varid_simdat,Gammay))
        CALL pn_check( PM_NFMPI_PUT_VAR_FLOAT(ncid_simdat,Gammaz_varid_simdat,Gammaz))

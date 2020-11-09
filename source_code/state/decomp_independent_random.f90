@@ -17,7 +17,8 @@
 ! and decomposition independent way. idum has to be smaller than zero.
 FUNCTION decomp_independent_random(i,j,k,idum)
   USE defprecision_module
-  USE parameter_module, ONLY : Nx,Ny
+  USE parameter_module, ONLY : Nx,Ny,rn_using_myid
+  USe message_passing_module, ONLY: myid
   IMPLICIT NONE
   REAL(kind=kr) :: decomp_independent_random
   INTEGER(kind=ki) :: i,j,k
@@ -26,10 +27,14 @@ FUNCTION decomp_independent_random(i,j,k,idum)
   INTEGER(kind=ki) :: idum_init = 0
   INTEGER(kind=ki) :: jdum = 0
   INTEGER(kind=ki) :: num_of_evals,count
-  REAL(kind=kr) :: rbla !,ran2
+  REAL(kind=kr) :: rbla!, ran2
 
   ! check if things should be initialized again 
   ! (i.e. idum changed since last call)
+
+IF (rn_using_myid) THEN
+  rbla = ran2(idum)
+ELSE   
   IF (idum .NE. idum_init) THEN 
      jdum = idum 
      idum_init = idum
@@ -49,6 +54,7 @@ FUNCTION decomp_independent_random(i,j,k,idum)
      ENDDO
   ENDIF
   num_of_evals_total = k*(Nx*Ny) + j*(Nx) + i + 1
+ENDIF 
   decomp_independent_random = rbla 
 
 END FUNCTION decomp_independent_random

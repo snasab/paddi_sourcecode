@@ -40,7 +40,9 @@ CONTAINS
 #include "diagnostics/rms_vector.f90"
 #include "diagnostics/rms_spec_vector.f90"
 #include "diagnostics/compute_uTC_rms.f90"
+#include "diagnostics/compute_upP_rms.f90"
 #include "diagnostics/compute_uTC_minmax.f90"
+#include "diagnostics/compute_upP_minmax.f90"
 #include "diagnostics/compute_average_flux.f90"
 #include "diagnostics/dissipation_buo.f90"
 

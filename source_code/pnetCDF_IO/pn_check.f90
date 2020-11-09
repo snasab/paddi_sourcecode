@@ -5,7 +5,7 @@ SUBROUTINE pn_check(status)
 #ifdef BLUE_GENE
   INCLUDE 'pnetcdf.inc'
 #else
-#include <pnetcdf.inc>
+#include 'pnetcdf.inc'
 #endif
   INTEGER, INTENT ( in) :: status
     

@@ -5,7 +5,8 @@
 SUBROUTINE pn_read_size_and_pa_from_simdat
   USE defprecision_module
   USE parameter_module,   ONLY : Nx,Ny,Nz,Gammax,Gammay,Gammaz,    &
-  &                              B_therm,B_comp,D_visc,D_therm,D_comp,S_therm,S_comp
+  &                              B_therm,B_comp,D_visc,D_therm,D_comp,S_therm,S_comp, &
+  &                              T_part,G_part,D_part,S_part,R_part,Dv_part
   USE message_passing_module, ONLY: start_mpi,stop_mpi,myid
 #ifdef MPI_MODULE
   USE MPI
@@ -18,6 +19,8 @@ SUBROUTINE pn_read_size_and_pa_from_simdat
   REAL(kind=kr)     :: Gammax_simdat,Gammay_simdat,Gammaz_simdat
   REAL(kind=kr)     :: B_therm_simdat,B_comp_simdat,D_visc_simdat,D_therm_simdat,D_comp_simdat
   REAL(kind=kr)     :: S_therm_simdat,S_comp_simdat
+  REAL(kind=kr)     :: T_part_simdat,G_part_simdat,D_part_simdat,S_part_simdat
+  REAL(kind=kr)     :: R_part_simdat,Dv_part_simdat
   INTEGER (kind=MPI_OFFSET_KIND) :: idummy
 #include 'pnetcdf.inc'
 !
@@ -57,6 +60,12 @@ SUBROUTINE pn_read_size_and_pa_from_simdat
   CALL pn_check (nfmpi_inq_varid(ncid_simdat,'D_comp',D_comp_varid_simdat)       )
   CALL pn_check (nfmpi_inq_varid(ncid_simdat,'S_therm',S_therm_varid_simdat)     )
   CALL pn_check (nfmpi_inq_varid(ncid_simdat,'S_comp',S_comp_varid_simdat)       )
+  CALL pn_check (nfmpi_inq_varid(ncid_simdat,'T_part',T_part_varid_simdat)       )
+  CALL pn_check (nfmpi_inq_varid(ncid_simdat,'G_part',G_part_varid_simdat)       )
+  CALL pn_check (nfmpi_inq_varid(ncid_simdat,'Dv_part',Dv_part_varid_simdat)       )
+  CALL pn_check (nfmpi_inq_varid(ncid_simdat,'D_part',D_part_varid_simdat)       )
+  CALL pn_check (nfmpi_inq_varid(ncid_simdat,'S_part',S_part_varid_simdat)       )
+  CALL pn_check (nfmpi_inq_varid(ncid_simdat,'R_part',R_part_varid_simdat)       )
   CALL pn_check (nfmpi_inq_varid(ncid_simdat,'t',time_varid_simdat)              )
   CALL pn_check (nfmpi_inq_varid(ncid_simdat,'timestep',timestep_varid_simdat)   )
   CALL pn_check (nfmpi_inq_varid(ncid_simdat,'dt',dt_varid_simdat)               )
@@ -71,6 +80,16 @@ SUBROUTINE pn_read_size_and_pa_from_simdat
   CALL pn_check (nfmpi_inq_varid(ncid_simdat,'uy',uy_varid_simdat)      )
 #endif
   CALL pn_check (nfmpi_inq_varid(ncid_simdat,'uz',uz_varid_simdat)      )
+  
+#ifdef PARTICLE_FIELD
+  CALL pn_check (nfmpi_inq_varid(ncid_simdat,'Part',Part_varid_simdat)  )
+  CALL pn_check (nfmpi_inq_varid(ncid_simdat,'upx',upx_varid_simdat)      )
+#ifndef TWO_DIMENSIONAL
+  CALL pn_check (nfmpi_inq_varid(ncid_simdat,'upy',upy_varid_simdat)      )
+#endif
+  CALL pn_check (nfmpi_inq_varid(ncid_simdat,'upz',upz_varid_simdat)      )
+#endif
+
   
   ! read Parameter values and check if they have changed
   ! write warning to standart output if they have 
@@ -87,6 +106,12 @@ SUBROUTINE pn_read_size_and_pa_from_simdat
   CALL pn_check( PM_NFMPI_GET_VAR_FLOAT_ALL(ncid_simdat,D_comp_varid_simdat,D_comp_simdat)   )
   CALL pn_check( PM_NFMPI_GET_VAR_FLOAT_ALL(ncid_simdat,S_therm_varid_simdat,S_therm_simdat) )
   CALL pn_check( PM_NFMPI_GET_VAR_FLOAT_ALL(ncid_simdat,S_comp_varid_simdat,S_comp_simdat)   )
+  CALL pn_check( PM_NFMPI_GET_VAR_FLOAT_ALL(ncid_simdat,T_part_varid_simdat,T_part_simdat)   )
+  CALL pn_check( PM_NFMPI_GET_VAR_FLOAT_ALL(ncid_simdat,G_part_varid_simdat,G_part_simdat)   )
+  CALL pn_check( PM_NFMPI_GET_VAR_FLOAT_ALL(ncid_simdat,Dv_part_varid_simdat,Dv_part_simdat)   )
+  CALL pn_check( PM_NFMPI_GET_VAR_FLOAT_ALL(ncid_simdat,D_part_varid_simdat,D_part_simdat)   )
+  CALL pn_check( PM_NFMPI_GET_VAR_FLOAT_ALL(ncid_simdat,S_part_varid_simdat,S_part_simdat)   )
+  CALL pn_check( PM_NFMPI_GET_VAR_FLOAT_ALL(ncid_simdat,R_part_varid_simdat,R_part_simdat)   )
 
   IF (Gammax_simdat.NE.Gammax) WRITE(*,'(a,i4,a,E15.7)') "Warning: Gammax on id ",myid, &
        & " is different from value in restart file. Rel. Error:",                       &
@@ -120,5 +145,24 @@ SUBROUTINE pn_read_size_and_pa_from_simdat
   IF (S_comp_simdat.NE.S_comp) WRITE(*,'(a,i4,a,E15.7)') "Warning: S_comp on id ",myid, &
        & " is different from value in restart file. Rel. Error:",           &
        & ABS((S_comp_simdat-S_comp)/S_comp)
+  IF (T_part_simdat.NE.T_part) WRITE(*,'(a,i4,a,E15.7)') "Warning: T_part on id ",myid, &
+  	   & " is different from value in restart file. Rel. Error:",           &
+	   & ABS((T_part_simdat-T_part)/T_part)
+  IF (G_part_simdat.NE.G_part) WRITE(*,'(a,i4,a,E15.7)') "Warning: G_part on id ",myid, &
+       & " is different from value in restart file. Rel. Error:",           &
+	   & ABS((G_part_simdat-G_part)/G_part)
+  IF (Dv_part_simdat.NE.Dv_part) WRITE(*,'(a,i4,a,E15.7)') "Warning: Dv_part on id ",myid, &
+       & " is different from value in restart file. Rel. Error:",           &
+           & ABS((Dv_part_simdat-Dv_part)/Dv_part)
+  IF (D_part_simdat.NE.D_part) WRITE(*,'(a,i4,a,E15.7)') "Warning: D_part on id ",myid, &
+       & " is different from value in restart file. Rel. Error:",           &
+	   & ABS((D_part_simdat-D_part)/D_part)
+  IF (S_part_simdat.NE.S_part) WRITE(*,'(a,i4,a,E15.7)') "Warning: S_part on id ",myid, &
+       & " is different from value in restart file. Rel. Error:",           &
+       & ABS((S_part_simdat-S_part)/S_part)
+  IF (R_part_simdat.NE.R_part) WRITE(*,'(a,i4,a,E15.7)') "Warning: R_part on id ",myid, &
+       & " is different from value in restart file. Rel. Error:",           &
+       & ABS((R_part_simdat-R_part)/R_part)
+	   
 
 END SUBROUTINE pn_read_size_and_pa_from_simdat

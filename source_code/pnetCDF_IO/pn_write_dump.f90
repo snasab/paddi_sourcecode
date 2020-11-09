@@ -1,4 +1,4 @@
-SUBROUTINE pn_write_dump(u,Temp,Chem,t,dt,istep)
+SUBROUTINE pn_write_dump(u,Temp,Chem,up,Part,t,dt,istep)
   USE defprecision_module
   USE state_module, ONLY : buoyancy,velocity,ltime0
   USE message_passing_module, ONLY: myid
@@ -11,8 +11,8 @@ SUBROUTINE pn_write_dump(u,Temp,Chem,t,dt,istep)
   IMPLICIT NONE
   INCLUDE "mpif.h"
 #endif
-  TYPE(velocity) :: u
-  TYPE(buoyancy) :: Temp,Chem
+  TYPE(velocity) :: u,up
+  TYPE(buoyancy) :: Temp,Chem,Part
   REAL(kind=kr) :: t,dt
   INTEGER(kind=ki) :: istep
   INTEGER(kind=MPI_OFFSET_KIND)  :: starts(4),counts(4)
@@ -45,6 +45,7 @@ SUBROUTINE pn_write_dump(u,Temp,Chem,t,dt,istep)
   CALL pn_check( PM_NFMPI_PUT_VARA_FLOAT_ALL(ncid_dump, Chem_varid_dump,    &
              & starts, counts,Chem%spec(:,:,:,ltime0)                )    )
 #endif
+
   CALL pn_check( PM_NFMPI_PUT_VARA_FLOAT_ALL(ncid_dump, ux_varid_dump,     &
              & starts, counts,u%spec(:,:,:,vec_x,ltime0)               )     )
 #ifndef TWO_DIMENSIONAL
@@ -53,6 +54,19 @@ SUBROUTINE pn_write_dump(u,Temp,Chem,t,dt,istep)
 #endif
   CALL pn_check( PM_NFMPI_PUT_VARA_FLOAT_ALL(ncid_dump, uz_varid_dump,     &
              & starts, counts,u%spec(:,:,:,vec_z,ltime0)               )     )
+			 
+#ifdef PARTICLE_FIELD
+  CALL pn_check( PM_NFMPI_PUT_VARA_FLOAT_ALL(ncid_dump, Part_varid_dump,    &
+			 & starts, counts,Part%spec(:,:,:,ltime0)                )    )
+  CALL pn_check( PM_NFMPI_PUT_VARA_FLOAT_ALL(ncid_dump, upx_varid_dump,     &
+		     & starts, counts,up%spec(:,:,:,vec_x,ltime0)               )     )
+#ifndef TWO_DIMENSIONAL
+  CALL pn_check( PM_NFMPI_PUT_VARA_FLOAT_ALL(ncid_dump, upy_varid_dump,     &
+		     & starts, counts,up%spec(:,:,:,vec_y,ltime0)               )     )
+#endif
+  CALL pn_check( PM_NFMPI_PUT_VARA_FLOAT_ALL(ncid_dump, upz_varid_dump,     &
+		     & starts, counts,up%spec(:,:,:,vec_z,ltime0)               )     )
+#endif
 
   ! flush all buffers 
   CALL pn_check( nfmpi_sync(ncid_dump) )

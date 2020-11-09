@@ -20,7 +20,7 @@ SUBROUTINE init_Chem_phys(Chem)
         DO i=0,Nx-1
            xc = i*dx
            rn = decomp_independent_random(i,j,k,idum) - 0.5_kr
-           Chem%phys(i,j,k) = 1E-3*rn !sin(alpha*xc+beta*yc+gamma*zc)
+           Chem%phys(i,j,k) = 0._kr
         ENDDO
      ENDDO
   ENDDO

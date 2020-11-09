@@ -1,41 +1,85 @@
 ! Compute the RHS of the velocity equation
-SUBROUTINE crhs_velocity(rhs,u,Temp,Chem)
+SUBROUTINE crhs_velocity(rhs,u,Temp,Chem,up,Part,drag)
   USE defprecision_module
   USE state_module, ONLY: buoyancy,velocity
-  USE parameter_module, ONLY: Nx,Nmax,kx,ky,kz,B_therm,B_comp
+  USE parameter_module, ONLY: Nx,Ny,Nz,Nmax,Gammay,Gammaz,kx,ky,kz,B_therm,B_comp,T_part,R_part
   USE mpi_transf_module, ONLY: mysy_phys,myey_phys,mysz_phys,myez_phys, &
       &                        mysx_spec,myex_spec,mysy_spec,myey_spec, &
-      &                        FFT_r2c
+      &                        mysx_phys,myex_phys,FFT_r2c
   IMPLICIT NONE
-  TYPE(buoyancy) :: Temp,Chem
-  TYPE(velocity) :: u
+  TYPE(buoyancy) :: Temp,Chem,Part
+  TYPE(velocity) :: u,up
+  REAL(kind=kr) :: drag(0:Nx-1,mysy_phys:myey_phys,mysz_phys:myez_phys,dim_vec)
   COMPLEX(kind=kr) ::  rhs(0:,mysx_spec:,mysy_spec:,1:) ! RHS 
-  REAL (kind=kr),POINTER     :: work_phys(:,:,:)
+  REAL (kind=kr),POINTER     :: work_phys(:,:,:), sin_forcing(:)
   REAL (kind=kr) :: hkx,hky,hkz
   REAL (kind=kr) :: ksquare
   COMPLEX (kind=kr) :: kN,fac
-  INTEGER (kind=ki) :: i,j,k
+  INTEGER (kind=ki) :: i,j,k 
+  REAL(kind=kr) :: yc,dy
+  REAL(kind=kr) :: zc,dz
+
+!Allocate and assign forcing term for fluid momentum equation
+!For the 3D case: sin(z)ex
+  ALLOCATE(sin_forcing(mysz_phys:myez_phys))
+  dz = Gammaz / Nz
+  DO k=mysz_phys,myez_phys
+    zc = k*dz
+    sin_forcing(k) = sin(zc)
+  ENDDO
 
 ! compute Fourier coeff. of -curl(u) \times u and add buoyancy force if present
   ALLOCATE(work_phys(0:Nx-1,mysy_phys:myey_phys,mysz_phys:myez_phys))
 
 #ifdef TWO_DIMENSIONAL
+  ! x-component
   work_phys = - u%curl(:,:,:,curl_y) * u%phys(:,:,:,vec_z) 
+! Insert forcing term in x-component of velocity
+  DO k=mysz_phys,myez_phys
+     DO j=mysy_phys,myey_phys
+        DO i=mysx_phys,myex_phys
+           work_phys(i,j,k) = work_phys(i,j,k) + sin_forcing(k)
+        ENDDO
+     ENDDO
+  ENDDO
+#ifdef PARTICLE_FIELD
+  work_phys = work_phys -  R_part * Part%phys * drag(:,:,:,vec_x)
+#endif
   CALL FFT_r2c(work_phys,rhs(:,:,:,vec_x))
   ! z-component 
   work_phys =   u%curl(:,:,:,curl_y) * u%phys(:,:,:,vec_x) 
+#ifdef PARTICLE_FIELD
+  work_phys = work_phys - R_part * Part%phys * drag(:,:,:,vec_z)
+#endif
 #else
   ! x-component
   work_phys = - u%curl(:,:,:,curl_y) * u%phys(:,:,:,vec_z) &
             & + u%curl(:,:,:,curl_z) * u%phys(:,:,:,vec_y) 
+! Insert forcing term in x-component of velocity
+  DO k=mysz_phys,myez_phys
+     DO j=mysy_phys,myey_phys
+        DO i=mysx_phys,myex_phys
+           work_phys(i,j,k) = work_phys(i,j,k) + sin_forcing(k) 
+        ENDDO
+     ENDDO
+  ENDDO
+#ifdef PARTICLE_FIELD
+  work_phys = work_phys - R_part * Part%phys * drag(:,:,:,vec_x)
+#endif
   CALL FFT_r2c(work_phys,rhs(:,:,:,vec_x))
   ! y-component 
   work_phys = - u%curl(:,:,:,curl_z) * u%phys(:,:,:,vec_x) &
             & + u%curl(:,:,:,curl_x) * u%phys(:,:,:,vec_z) 
+#ifdef PARTICLE_FIELD
+  work_phys = work_phys - R_part * Part%phys * drag(:,:,:,vec_y)
+#endif
   CALL FFT_r2c(work_phys,rhs(:,:,:,vec_y))
   ! z-component 
   work_phys = - u%curl(:,:,:,curl_x) * u%phys(:,:,:,vec_y) &
             & + u%curl(:,:,:,curl_y) * u%phys(:,:,:,vec_x) 
+#ifdef PARTICLE_FIELD
+  work_phys = work_phys - R_part * Part%phys * drag(:,:,:,vec_z)
+#endif
 #endif
 
 #ifdef TEMPERATURE_FIELD

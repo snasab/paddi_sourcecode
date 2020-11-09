@@ -13,6 +13,7 @@ module main_module
   USE state_module, ONLY :
   use message_passing_module, ONLY :
   use diff_op_module, ONLY :
+  use minit_module, ONLY:
   IMPLICIT NONE
   SAVE
 !*********************************************************************
@@ -20,7 +21,7 @@ module main_module
 !*********************************************************************
 
   ! Coefficients in AB/BDF3 time stepping scheme
-  real(kind=kr) :: ta0,ta1,ta2,ta3,tb1,tb2,tb3 
+  real(kind=kr) :: ta0,ta1,ta2,ta3,tb1,tb2,tb3
 
 CONTAINS
 
@@ -35,7 +36,9 @@ CONTAINS
 ! third order Adams-Bashforth / Backward-Differencing (semi-implicit multi-step)
 #include "main/AB_BDF3/timestep_AB_BDF3.f90"
 #include "main/AB_BDF3/tmstp_buoyancy_AB_BDF3.f90"
+#include "main/AB_BDF3/tmstp_particle_AB_BDF3.f90"
 #include "main/AB_BDF3/tmstp_velocity_AB_BDF3.f90"
+#include "main/AB_BDF3/tmstp_particle_vel_AB_BDF3.f90"
 #include "main/AB_BDF3/comp_coeff_AB_BDF3.f90"
 #include "main/AB_BDF3/CFL_AB_BDF3.f90"
 #include "main/AB_BDF3/adapt_dt_AB_BDF3.f90"
@@ -44,8 +47,13 @@ CONTAINS
 #include "main/init.f90"
 #include "main/free_allocated_memory.f90"
 #include "main/crhs_buoyancy.f90"
+#include "main/crhs_particle.f90"
 #include "main/crhs_velocity.f90"
+#include "main/crhs_part_velocity.f90"
 #include "main/compute_phys_space_vars.f90"
+#include "main/allocate_drag.f90"
+#include "main/compute_drag.f90"
+#include "main/deallocate_drag.f90"
 
 
 end module main_module

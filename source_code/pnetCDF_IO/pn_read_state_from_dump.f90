@@ -1,6 +1,6 @@
 ! This subroutine reads the data from the restart file. It is assumed 
 ! that pn_read_size_and_pa_from_dump had already been called.
-SUBROUTINE pn_read_state_from_dump(u,Temp,Chem,istep,t,dt)
+SUBROUTINE pn_read_state_from_dump(u,Temp,Chem,up,Part,istep,t,dt)
   USE defprecision_module
   USE state_module, ONLY : velocity,buoyancy,ltime0
   USE parameter_module
@@ -13,8 +13,8 @@ SUBROUTINE pn_read_state_from_dump(u,Temp,Chem,istep,t,dt)
   IMPLICIT NONE
   INCLUDE "mpif.h"
 #endif
-  TYPE(velocity)    :: u
-  TYPE(buoyancy)    :: Temp,Chem
+  TYPE(velocity)    :: u,up
+  TYPE(buoyancy)    :: Temp,Chem,Part
   INTEGER(kind=ki)  :: istep
   REAL (kind=kr)    :: t,dt
   INTEGER(kind=MPI_OFFSET_KIND)  :: starts(4),counts(4)
@@ -53,6 +53,20 @@ SUBROUTINE pn_read_state_from_dump(u,Temp,Chem,istep,t,dt)
 #endif
   CALL pn_check( PM_NFMPI_GET_VARA_FLOAT_ALL(ncid_dump, uz_varid_dump,    &
               & starts, counts,u%spec(:,:,:,vec_z,ltime0))              )
+			  
+#ifdef PARTICLE_FIELD
+  CALL pn_check( PM_NFMPI_GET_VARA_FLOAT_ALL(ncid_dump, Part_varid_dump,    &
+			  & starts, counts,Part%spec(:,:,:,ltime0))                   )
+  CALL pn_check( PM_NFMPI_GET_VARA_FLOAT_ALL(ncid_dump, upx_varid_dump,    &
+			  & starts, counts,up%spec(:,:,:,vec_x,ltime0))              )
+#ifndef TWO_DIMENSIONAL
+  CALL pn_check( PM_NFMPI_GET_VARA_FLOAT_ALL(ncid_dump, upy_varid_dump,    &
+			  & starts, counts,up%spec(:,:,:,vec_y,ltime0))              )
+#endif
+  CALL pn_check( PM_NFMPI_GET_VARA_FLOAT_ALL(ncid_dump, upz_varid_dump,    &
+			  & starts, counts,up%spec(:,:,:,vec_z,ltime0))              )
+#endif			  
+			  
   ! close dump file
   CALL pn_check( nfmpi_close(ncid_dump) )
 END SUBROUTINE pn_read_state_from_dump

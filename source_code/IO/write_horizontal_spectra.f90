@@ -1,23 +1,25 @@
-subroutine write_horizontal_spectra(u,Temp,Chem,istep,t)
+subroutine write_horizontal_spectra(u,Temp,Chem,up,Part,istep,t)
   use defprecision_module
   use state_module, ONLY: buoyancy, velocity, ltime0
   use message_passing_module, ONLY : myid
   use parameter_module, ONLY: kx,ky,Lmax,Mmax
   USE mpi_transf_module,  ONLY:  mysx_spec,myex_spec,mysy_spec,myey_spec
   implicit none
-  type(velocity)   :: u
-  type(buoyancy)   :: Temp,Chem
+  type(velocity)   :: u,up
+  type(buoyancy)   :: Temp,Chem,Part
   integer(kind=ki) :: istep
   real(kind=kr)    :: t
-  REAL(kind=kr), POINTER   :: Ener_spec_u(:,:,:)
-  REAL(Kind=kr), POINTER   :: Ener_spec_Temp(:,:),Ener_spec_Chem(:,:)
+  REAL(kind=kr), POINTER   :: Ener_spec_u(:,:,:),Ener_spec_up(:,:,:)
+  REAL(Kind=kr), POINTER   :: Ener_spec_Temp(:,:),Ener_spec_Chem(:,:),Ener_spec_Part(:,:)
   REAL(kind=kr), POINTER   :: spec_local(:,:)
-  REAL(kind=kr)    :: Ekin,ETemp,EChem
+  REAL(kind=kr)    :: Ekin,Ekinp,ETemp,EChem,EPart
   integer(kind=ki) :: l,m
   ! allocate arrays for the horizontal energy spectra
   ALLOCATE(Ener_spec_u(0:Lmax,0:max(2*Mmax-1,0),3))
+  ALLOCATE(Ener_spec_up(0:Lmax,0:max(2*Mmax-1,0),3))
   ALLOCATE(Ener_spec_Temp(0:Lmax,0:max(2*Mmax-1,0)))
   ALLOCATE(Ener_spec_Chem(0:Lmax,0:max(2*Mmax-1,0)))
+  ALLOCATE(Ener_spec_Part(0:Lmax,0:max(2*Mmax-1,0)))
   ALLOCATE(spec_local(mysx_spec:myex_spec,mysy_spec:myey_spec))
   
   ! compute spectra
@@ -43,34 +45,61 @@ subroutine write_horizontal_spectra(u,Temp,Chem,istep,t)
   call gather_E_spec(spec_local,Ener_spec_Chem)
 #else
   Ener_spec_Chem = 0._kr
+#endif  
+#ifdef PARTICLE_FIELD
+  spec_local = horizontal_power_spectrum(Part%spec(:,:,:,ltime0))
+  call gather_E_spec(spec_local,Ener_spec_Part)
+  
+  ! compute up-spectra
+  spec_local = horizontal_power_spectrum(up%spec(:,:,:,vec_x,ltime0)) 
+  call gather_E_spec(spec_local,Ener_spec_up(:,:,1))
+#ifdef TWO_DIMENSIONAL
+  Ener_spec_up(:,:,2)=0._kr
+#else
+  spec_local = horizontal_power_spectrum(up%spec(:,:,:,vec_y,ltime0)) 
+  call gather_E_spec(spec_local,Ener_spec_up(:,:,2))
+#endif
+  spec_local = horizontal_power_spectrum(up%spec(:,:,:,vec_z,ltime0)) 
+  call gather_E_spec(spec_local,Ener_spec_up(:,:,3))
+#else
+    Ener_spec_Part = 0._kr
 #endif
   ! write spectrum
   IF (myid.EQ.0) THEN 
      WRITE (uout(2),'(a,I8,a,E20.7)') '# Timstep =',istep,' time =',t
      Ekin=0._kr ! used for testing: see below
+	 Ekinp=0._kr
      Etemp=0._kr
      EChem=0._kr
+	 EPart=0._kr
      DO l=0,Lmax
         DO m=0,max(2*Mmax-1,0)
            WRITE(uout(2),'(18E20.7)') kx(l),ky(m),                      &
                 & Ener_spec_u(l,m,1) , Ener_spec_u(l,m,2) , Ener_spec_u(l,m,3), &
                 & Ener_spec_u(l,m,1) + Ener_spec_u(l,m,2) + Ener_spec_u(l,m,3), &
-                & Ener_spec_Temp(l,m),Ener_spec_Chem(l,m)
+                & Ener_spec_Temp(l,m),Ener_spec_Chem(l,m),Ener_spec_Part(l,m),  &
+                & Ener_spec_up(l,m,1) , Ener_spec_up(l,m,2) , Ener_spec_up(l,m,3), &
+                & Ener_spec_up(l,m,1) + Ener_spec_up(l,m,2) + Ener_spec_up(l,m,3)
                Ekin=Ekin+(Ener_spec_u(l,m,1) + Ener_spec_u(l,m,2) + Ener_spec_u(l,m,3))
+			   Ekinp=Ekinp+(Ener_spec_up(l,m,1) + Ener_spec_up(l,m,2) + Ener_spec_up(l,m,3))
                Etemp=Etemp+Ener_spec_Temp(l,m)
                Echem=Echem+Ener_spec_Chem(l,m)
+			   EPart=EPart+Ener_spec_Part(l,m)
         ENDDO
      ENDDO
      WRITE(*,'(a,E30.16)') "Ekin(horiz.Spec) =",Ekin   ! this might be used for testing:
+	 WRITE(*,'(a,E30.16)') "Ekinp(horiz.Spec) =",Ekinp 
      WRITE(*,'(a,E30.16)') "Etemp(horiz.Spec) =",Etemp ! volume avaraged energy? 
      WRITE(*,'(a,E30.16)') "Echem(horiz.Spec) =",Echem ! Compare with the the squared rms values 
+	 WRITE(*,'(a,E30.16)') "EPart(horiz.Spec) =",EPart
      !                                                ! computed in routine wrtite_diagnostics_file
      WRITE(uout(2),*) 
      WRITE(uout(2),*)
   ENDIF
 
   !deallocate memory
-  DEALLOCATE(Ener_spec_u,Ener_spec_Temp,Ener_spec_Chem,spec_local)
+  !DEALLOCATE(Ener_spec_u,Ener_spec_Temp,Ener_spec_Chem,spec_local)
+  DEALLOCATE(Ener_spec_u,Ener_spec_up,Ener_spec_Temp,Ener_spec_Chem,Ener_spec_Part,spec_local)
   
 end subroutine write_horizontal_spectra
 

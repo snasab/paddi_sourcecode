@@ -1,18 +1,26 @@
 MODULE parameter_module
-!+------------------------------------------------------------------------+
-!| This module contains all the parameters necessary for the calculation. |
-!| The code solves the following equations:                               |
+!+----------------------------------------------------------------------------------------------+
+!| This module contains all the parameters necessary for the calculation. 						|
+!| The code solves the following equations:                               						|
+!|                                                                        						|
+!| Du                                                                    						|
+!| -- = - \nabla P + D_visc \nabla^2 u + B_therm T e_z - B_comp C e_z + R_part((u_p - u)/T_part)*r   	|
+!| Dt         																					|
+!|																								|
+!| Du_p                                                                    						|
+!| ---- = (u_p - u)/T_part - G_part e_z  + Dv_part \nabla^2 up 														|
+!| Dt                                                                     +---------------------+
 !|                                                                        |
-!| du                                                                     |
-!| -- = - \nabla P + D_visc \nabla^2 u + B_therm T e_z - B_comp C e_z     |
-!| dt                                                                     |
-!|                                                                        |
-!| dT                                                                     |
+!| DT                                                                     |
 !| -- = D_therm \nabla^2 T + S_therm w                                    |
-!| dt                                                                     |
+!| Dt                                                                     |
 !|                                                                        |
-!| dC                                                                     |
+!| DC                                                                     |
 !| -- = D_comp \nabla^2 C + S_comp w                                      |
+!| Dt                                                                     |
+!| 																		  |
+!| dr                                                                     |
+!| -- = - div (u_p r) + D_part \nabla^2 r - S_part (u_p e_z)                |
 !| dt                                                                     |
 !|                                                                        |
 !| \nabla * u = 0                                                         |
@@ -23,10 +31,15 @@ MODULE parameter_module
 !|                                                                        |
 !|   B_therm, B_comp represent the coefficients in fromt of the buoyancy  |
 !|                   terms;                                               |
-!|   D_visc,D_therm,D_comp are the viscous, thermal and compositional     |
-!|                   diffusion parameters;                                |
-!|   S_therm, S_comp are the coefficients resulting from the background   |
-!|                   stratification.                                      |
+!|   D_visc,D_therm,D_comp,D_part are the viscous,thermal,compositional,  |
+!|                   particulate diffusion parameters;                    |
+!|   S_therm, S_comp, S_part are the coefficients resulting from the      |
+!|                   background stratification;                           |
+!|   T_part represents the stopping time parameter;			  |
+!|	 G_part represents the gravity parameter.			  |
+!|   R_part scales the drag term accordingly.                             |
+!|   Dv_part is the particle viscous diffusion parameter in particle      |
+!|       momentum equation.                                               |
 !|                                                                        |
 !| Implementing the algorithm for these general equations has the         |
 !| advantage that switching between different non-dimensionalizations     |
@@ -55,6 +68,12 @@ MODULE parameter_module
   REAL(kind=kr)    :: D_comp     ! Compositional diffusion parameter
   REAL(kind=kr)    :: S_therm    ! Thermal background stratification parameter
   REAL(kind=kr)    :: S_comp     ! Compositional background stratification parameter
+  REAL(kind=kr)    :: T_part     ! Particle stopping time parameter
+  REAL(kind=kr)    :: G_part     ! Gravity parameter
+  REAL(kind=kr)    :: Dv_part     ! Particle viscous diffusion parameter
+  REAL(kind=kr)    :: D_part     ! Particle diffusion parameter
+  REAL(kind=kr)    :: S_part     ! Particle background stratification parameter
+  REAL(kind=kr)    :: R_part     ! Particle scaling coefficient  
   REAL(kind=kr)    :: Gammax     ! length (x-direction) of the box
   REAL(kind=kr)    :: Gammay     ! width (y-direction) of the box
   REAL(kind=kr)    :: Gammaz     ! height (z-direction) of the box
@@ -67,6 +86,7 @@ MODULE parameter_module
   ! FFTW wisdom stuff
   CHARACTER(LEN=100):: FFTW_wisdom_file     ! File to store FFTW wisdom
   LOGICAL           :: use_FFTW_wisdom_file ! Should wisdom be imported from this file?
+  LOGICAL           :: rn_using_myid        ! Generating random numbers using myid
   INTEGER(kind=ki),PARAMETER :: uwisdom=60  ! File unit of FFTW widsom file
   ! FFT storage scheme
   REAL (kind=kr) , POINTER   :: kx(:),ky(:),kz(:) !Mapping tables - array index to wavenumber

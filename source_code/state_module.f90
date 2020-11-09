@@ -6,6 +6,7 @@
 !| Furthermore, some subroutines are included which perform data      |
 !| initializations, etc.                                              |
 !+--------------------------------------------------------------------+
+#include "defs_MPI.h"
 MODULE state_module
   USE defprecision_module
   USE defs_2D_3D_module
@@ -44,15 +45,21 @@ MODULE state_module
 
   INTEGER (kind=ki) :: rtime1 = 1 !RHS at time step t_{n-1}
   INTEGER (kind=ki) :: rtime2 = 2 !RHS at time step t_{n-2}
-
+  
+  INTEGER (kind=ki) :: u_var    = 0
+  INTEGER (kind=ki) :: temp_var = 1
+  INTEGER (kind=ki) :: up_var   = 2
+  INTEGER (kind=ki) :: Part_var = 3
 CONTAINS
 
 #include "state/allocate_uTC.f90"
 #include "state/deallocate_uTC.f90"
 #include "state/set_initial_condition.f90"
 #include "state/init_u_phys.f90"
+#include "state/init_up_phys.f90"
 #include "state/init_Temp_phys.f90"
 #include "state/init_Chem_phys.f90"
+#include "state/init_Part_phys.f90"
 #include "state/shift_time_pointers.f90"
 #include "state/decomp_independent_random.f90"
 #include "state/make_solenoidal.f90"

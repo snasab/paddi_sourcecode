@@ -1,6 +1,7 @@
 SUBROUTINE open_files
   USE defprecision_module
   USE parameter_module, ONLY : B_therm,B_comp,D_visc,D_therm,D_comp,S_therm,S_comp, &
+                             & T_part,G_part,D_part,S_part,R_part,Dv_part,          & 
                              & Nx,Ny,Nz,Lmax,Mmax,Nmax,                             &
                              & Gammax,Gammay,Gammaz,CFL_safety_fac,dt_max,          &
                              & dt_initial
@@ -8,7 +9,7 @@ SUBROUTINE open_files
   USE pnetCDF_IO_module, ONLY: pn_open_dump,pn_open_simdat_file
   IMPLICIT NONE
   INTEGER (kind=ki)            :: jcopen,jcwinfo2
-  INTEGER (kind=ki),PARAMETER  :: ninfo=7
+  INTEGER (kind=ki),PARAMETER  :: ninfo=13
   REAL (kind=kr_jc)            :: finfo(ninfo)
   CHARACTER (LEN=20)           :: cinfo(ninfo)
   CHARACTER (LEN=100)          :: jcname
@@ -60,6 +61,12 @@ SUBROUTINE open_files
         WRITE(uout(i),'(a,E20.7)') "# Compositional diffusion parameter   :",D_comp
         WRITE(uout(i),'(a,E20.7)') "# Thermal background stratification parameter       :",S_therm
         WRITE(uout(i),'(a,E20.7)') "# Compositional background stratification parameter :",S_comp
+        WRITE(uout(i),'(a,E20.7)') "# Stopping time parameter  :",T_part
+        WRITE(uout(i),'(a,E20.7)') "# Gravity parameter        :",G_part
+        WRITE(uout(i),'(a,E20.7)') "# Particle diffusion parameter        :",D_part
+        WRITE(uout(i),'(a,E20.7)') "# Particle viscous diffusion parameter        :",Dv_part
+        WRITE(uout(i),'(a,E20.7)') "# Particle background stratification parameter      :",S_part
+        WRITE(uout(i),'(a,E20.7)') "# Particle scaling coefficient        :",R_part
         WRITE(uout(i),'(a,E20.7)') "# Length of box            :",Gammax
         WRITE(uout(i),'(a,E20.7)') "# Width of box             :",Gammay
         WRITE(uout(i),'(a,E20.7)') "# Height of box            :",Gammaz
@@ -123,6 +130,18 @@ SUBROUTINE open_files
         finfo(6)= S_therm
         cinfo(7)= "Compositional background stratification parameter"
         finfo(7)= S_comp
+	cinfo(8)= "Stopping time parameter"
+	finfo(8)= T_part
+	cinfo(9)= "Gravity parameter"
+	finfo(9)= G_part
+	cinfo(10)= "Particle diffusion parameter"
+	finfo(10)= D_part
+        cinfo(11)= "Particle viscous diffusion parameter"
+        finfo(11)= Dv_part
+	cinfo(12)= "Particle background stratification parameter"
+	finfo(12)= S_part
+        cinfo(13)= "Particle scaling coefficient" 
+        finfo(13)= R_part
 #ifdef TWO_DIMENSIONAL
         number_of_jc_fields = 3
 #else

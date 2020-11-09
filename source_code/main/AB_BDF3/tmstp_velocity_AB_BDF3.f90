@@ -1,14 +1,15 @@
 ! This subroutine computes the new Fourier coefficients of the velocity field with the 
 ! AB3/BDF3 method. 
-SUBROUTINE tmstp_velocity_AB_BDF3(u,Temp,Chem)
+SUBROUTINE tmstp_velocity_AB_BDF3(u,Temp,Chem,up,Part,drag)
   USE defprecision_module
   USE state_module, ONLY: buoyancy,velocity,ltime0,ltime1,ltime2,rtime1,rtime2
   USE mpi_transf_module, ONLY: mysx_spec,myex_spec,mysy_spec,myey_spec, &
       &                        mysy_phys,myey_phys,mysz_phys,myez_phys
   USE parameter_module, ONLY : Lmax,Mmax,Nmax,Nx,kx,ky,kz,D_visc
   IMPLICIT NONE
-  TYPE(buoyancy)   :: Temp,Chem ! Temperature and Chemical field
-  TYPE(velocity)   :: u ! velocity field
+  TYPE(buoyancy)   :: Temp,Chem,Part ! Temperature and Chemical field
+  TYPE(velocity)   :: u,up ! velocity field
+  REAL(kind=kr)    :: drag(0:Nx-1,mysy_phys:myey_phys,mysz_phys:myez_phys,dim_vec)
   REAL(kind=kr)    :: fac,kxsquared,kysquared,kzsquared
   INTEGER(kind=ki) :: i,j,k,l,nqfac,nqfacx,nqfacy,nqfacz
 
@@ -22,7 +23,7 @@ SUBROUTINE tmstp_velocity_AB_BDF3(u,Temp,Chem)
   &                        + tb3 * u%rhs(:,:,:,:,rtime1)   & ! still contains rhs from level n-3
   &                        + tb2 * u%rhs(:,:,:,:,rtime2)   
 
-  CALL crhs_velocity(u%rhs(:,:,:,:,rtime1),u,Temp,Chem) ! compute terms from time level n-1 ...
+  CALL crhs_velocity(u%rhs(:,:,:,:,rtime1),u,Temp,Chem,up,Part,drag) ! compute terms from time level n-1 ...
   u%spec(:,:,:,:,ltime0) =   u%spec(:,:,:,:,ltime0) + tb1 * u%rhs(:,:,:,:,rtime1) !...and add
 
 ! compute new velocity field at timelevel n 

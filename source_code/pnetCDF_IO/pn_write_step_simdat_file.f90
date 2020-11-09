@@ -1,6 +1,6 @@
 ! This sumboutine adds the data of the current time step to the 
 ! netCDF output file 
-SUBROUTINE pn_write_step_simdat_file(u,Temp,Chem,istep,t,dt)
+SUBROUTINE pn_write_step_simdat_file(u,Temp,Chem,up,Part,istep,t,dt)
   USE defprecision_module
   USE state_module
   USE mpi_transf_module, ONLY : mysy_phys,myey_phys,mysz_phys,myez_phys
@@ -13,8 +13,8 @@ SUBROUTINE pn_write_step_simdat_file(u,Temp,Chem,istep,t,dt)
   IMPLICIT NONE
   INCLUDE "mpif.h"
 #endif
-  TYPE(velocity)             :: u
-  TYPE(buoyancy)             :: Temp,Chem
+  TYPE(velocity)             :: u,up
+  TYPE(buoyancy)             :: Temp,Chem,Part
   REAL(kind=kr)              :: t,dt
   INTEGER(kind=ki)           :: istep
   INTEGER(kind=MPI_OFFSET_KIND)  :: starts(4),counts(4)
@@ -62,6 +62,18 @@ IF (write_pnetCDF_sim_dat) THEN
 #endif
   CALL pn_check( PM_NFMPI_PUT_VARA_FLOAT_ALL(ncid_simdat, uz_varid_simdat,      &
                                          & starts, counts,u%phys(:,:,:,vec_z)) )
+#ifdef PARTICLE_FIELD
+  CALL pn_check( PM_NFMPI_PUT_VARA_FLOAT_ALL(ncid_simdat, Part_varid_simdat,    &
+                                         & starts, counts,Part%phys)          )
+  CALL pn_check( PM_NFMPI_PUT_VARA_FLOAT_ALL(ncid_simdat, upx_varid_simdat,      &
+                                         & starts, counts,up%phys(:,:,:,vec_x)) )
+  CALL pn_check( PM_NFMPI_PUT_VARA_FLOAT_ALL(ncid_simdat, upz_varid_simdat,     &
+                                         & starts, counts,up%phys(:,:,:,vec_z)) )
+#ifndef TWO_DIMENSIONAL
+  CALL pn_check( PM_NFMPI_PUT_VARA_FLOAT_ALL(ncid_simdat, upy_varid_simdat,      &
+                                         & starts, counts,up%phys(:,:,:,vec_y)) )
+#endif
+#endif
   ! increase counter
   nstep_netcdf = nstep_netcdf + 1 
 

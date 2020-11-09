@@ -1,4 +1,4 @@
-SUBROUTINE write_compressed_file(u,Temp,Chem,istep,t,dt)
+SUBROUTINE write_compressed_file(u,Temp,Chem,up,Part,istep,t,dt)
   USE defprecision_module
   USE state_module, ONLY: buoyancy,velocity
   USE mpi_transf_module, ONLY : mysy_phys,myey_phys,mysz_phys,myez_phys,  &
@@ -6,8 +6,8 @@ SUBROUTINE write_compressed_file(u,Temp,Chem,istep,t,dt)
   USE message_passing_module, ONLY : myid
   USE parameter_module, ONLY: Nx,Ny,Nz
   IMPLICIT NONE
-  TYPE(velocity)             :: u
-  TYPE(buoyancy)             :: Temp,Chem
+  TYPE(velocity)             :: u,up
+  TYPE(buoyancy)             :: Temp,Chem,Part
   REAL(kind=kr)              :: t,dt
   INTEGER(kind=ki)           :: istep
   REAL(kind=krs)             :: local_sp(0:Nx-1,mysy_phys:myey_phys, &
@@ -47,6 +47,14 @@ SUBROUTINE write_compressed_file(u,Temp,Chem,istep,t,dt)
      &   ierr = jcwrite(1,JPCHEM, istep, REAL(t,kind=krs), REAL(dt,kind=krs), &
      &                  work, Nx, Ny, Nz,quality)
 #endif
+
+!#ifdef PARTICLE_FIELD
+!     local_sp = REAL(Part%phys,kind=krs)
+!     CALL collect_phys(local_sp,work,0)
+!     IF (myid.EQ.0)                                                           &  
+!     &   ierr = jcwrite(1,JPPART, istep, REAL(t,kind=krs), REAL(dt,kind=krs), &
+!     &                  work, Nx, Ny, Nz,quality)
+!#endif
 
      local_sp = REAL(u%phys(:,:,:,vec_x),kind=krs)
      CALL collect_phys(local_sp,work,0)

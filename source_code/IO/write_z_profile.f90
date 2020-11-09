@@ -1,8 +1,8 @@
 ! +-----------------------------------------------------------------------------+
-! | The folowing subroutine writes the fields (Temp,Chem,u,curl u)(x=0,y=0,z)   |
+! | The folowing subroutine writes the fields (Temp,Chem,Part,u,curl u)(x=0,y=0,z)   |
 ! | to a disk file.                                                             |
 ! +-----------------------------------------------------------------------------+
-SUBROUTINE write_z_profile(u,Temp,Chem,istep,t)
+SUBROUTINE write_z_profile(u,Temp,Chem,up,Part,istep,t)
   USE defprecision_module
   USE state_module
   USE message_passing_module, ONLY : myid
@@ -10,8 +10,8 @@ SUBROUTINE write_z_profile(u,Temp,Chem,istep,t)
   USE mpi_transf_module, ONLY : mysx_phys,mysy_phys,mysz_phys,myez_phys,         &
   &                             mysx_spec,mysy_spec,collect_horizontal_sum_phys
   IMPLICIT NONE
-  TYPE(velocity)   :: u
-  TYPE(buoyancy)   :: Temp,Chem
+  TYPE(velocity)   :: u,up
+  TYPE(buoyancy)   :: Temp,Chem,Part
   INTEGER(kind=ki) :: istep
   REAL(kind=kr)    :: t
   INTEGER(kind=ki) :: nprofile,nprofile_mean,ncount
@@ -31,6 +31,11 @@ SUBROUTINE write_z_profile(u,Temp,Chem,istep,t)
   nprofile = nprofile + 1
   nprofile_mean = nprofile_mean + 1 
 #endif
+#if defined(PARTICLE_FIELD)
+! +1 for the Part field and +6 for the particle velocity field
+  nprofile = nprofile + 7
+  nprofile_mean = nprofile_mean + 7
+#endif
 
   
   ALLOCATE(profile(nprofile,0:Nz-1))
@@ -48,8 +53,8 @@ SUBROUTINE write_z_profile(u,Temp,Chem,istep,t)
 #endif
      local_z(3,:)=u%phys(0,0,:,vec_z)
 #ifdef TWO_DIMENSIONAL
-     local_z(4,:)=0
-     local_z(6,:)=0
+     local_z(4,:)=0._kr
+     local_z(6,:)=0._kr
 #else 
      local_z(4,:)=u%curl(0,0,:,curl_x)
      local_z(6,:)=u%curl(0,0,:,curl_z)
@@ -62,6 +67,25 @@ SUBROUTINE write_z_profile(u,Temp,Chem,istep,t)
 #endif
 #if defined(CHEMICAL_FIELD)
      local_z(ncount+1,:)=Chem%phys(0,0,:)
+	 ncount=ncount+1
+#endif
+#if defined(PARTICLE_FIELD)
+     local_z(ncount+1,:)=Part%phys(0,0,:)
+     local_z(ncount+2,:)=up%phys(0,0,:,vec_x)
+#ifdef TWO_DIMENSIONAL
+     local_z(ncount+3,:)=0._kr
+#else
+     local_z(ncount+3,:)=up%phys(0,0,:,vec_y)
+#endif
+     local_z(ncount+4,:)=up%phys(0,0,:,vec_z)
+#ifdef TWO_DIMENSIONAL
+     local_z(ncount+5,:)=0._kr
+     local_z(ncount+7,:)=0._kr
+#else 
+     local_z(ncount+5,:)=up%curl(0,0,:,curl_x)
+     local_z(ncount+7,:)=up%curl(0,0,:,curl_z)
+#endif
+     local_z(ncount+6,:)=up%curl(0,0,:,curl_y)
 #endif
   ENDIF
 
@@ -91,6 +115,23 @@ SUBROUTINE write_z_profile(u,Temp,Chem,istep,t)
 #if defined(CHEMICAL_FIELD)
   CALL collect_horizontal_sum_phys(Chem%phys(:,:,:),profile_mean(ncount+1,:),0)
   ncount = ncount + 1 
+#endif
+#if defined(PARTICLE_FIELD)
+  CALL collect_horizontal_sum_phys(Part%phys(:,:,:),profile_mean(ncount+1,:),0)
+  
+  CALL collect_horizontal_sum_phys(up%phys(:,:,:,vec_x),profile_mean(ncount+2,:),0)  
+  CALL collect_horizontal_sum_phys(up%phys(:,:,:,vec_z),profile_mean(ncount+4,:),0)
+  CALL collect_horizontal_sum_phys(up%curl(:,:,:,curl_y),profile_mean(ncount+6,:),0)
+#ifdef TWO_DIMENSIONAL
+  profile_mean(ncount+3,:) = 0._kr
+  profile_mean(ncount+5,:) = 0._kr
+  profile_mean(ncount+7,:) = 0._kr
+#else 
+  CALL collect_horizontal_sum_phys(up%phys(:,:,:,vec_y),profile_mean(ncount+3,:),0)
+  CALL collect_horizontal_sum_phys(up%curl(:,:,:,curl_x),profile_mean(ncount+5,:),0)
+  CALL collect_horizontal_sum_phys(up%curl(:,:,:,curl_z),profile_mean(ncount+7,:),0)
+#endif 
+  ncount = ncount + 7
 #endif
 
   profile_mean = profile_mean / (Nx * Ny)

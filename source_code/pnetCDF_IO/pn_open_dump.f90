@@ -1,7 +1,8 @@
 SUBROUTINE pn_open_dump
   USE defprecision_module
   USE parameter_module, ONLY : Nmax,Lmax,Mmax,B_therm,B_comp,D_visc,D_therm,D_comp, &
-  &                            S_therm,S_comp,Gammax,Gammay,Gammaz,kx,ky,kz
+  &                            S_therm,S_comp,Gammax,Gammay,Gammaz,kx,ky,kz,        &
+  &                            T_part,G_part,D_part,S_part,R_part,Dv_part
   USE message_passing_module, ONLY: myid
 #ifdef MPI_MODULE
   USE MPI 
@@ -80,6 +81,36 @@ SUBROUTINE pn_open_dump
                & INT(LEN('Compositional background stratification parameter'), &
                & kind=MPI_OFFSET_KIND),                                        &
                & 'Compositional background stratification parameter')  )
+  CALL pn_check( nfmpi_def_var(ncid_dump, "T_part", PM_NF_FLOAT,0,0,T_part_varid_dump) )
+  CALL pn_check( nfmpi_put_att_text(ncid_dump,T_part_varid_dump, 'long_name',  &
+               & INT(LEN('Stopping time parameter'), &
+               & kind=MPI_OFFSET_KIND),                                        &
+               & 'Stopping time parameter')  )
+  CALL pn_check( nfmpi_def_var(ncid_dump, "G_part", PM_NF_FLOAT,0,0,G_part_varid_dump) )
+  CALL pn_check( nfmpi_put_att_text(ncid_dump,G_part_varid_dump, 'long_name',  &
+               & INT(LEN('Gravity parameter'), &
+               & kind=MPI_OFFSET_KIND),                                        &
+               & 'Gravity parameter')  )
+  CALL pn_check( nfmpi_def_var(ncid_dump, "Dv_part", PM_NF_FLOAT,0,0,Dv_part_varid_dump) )
+  CALL pn_check( nfmpi_put_att_text(ncid_dump,Dv_part_varid_dump, 'long_name',  &
+               & INT(LEN('Particle viscous diffusion parameter'), &
+               & kind=MPI_OFFSET_KIND),                                        &
+               & 'Particle viscous diffusion parameter')  )
+  CALL pn_check( nfmpi_def_var(ncid_dump, "D_part", PM_NF_FLOAT,0,0,D_part_varid_dump) )
+  CALL pn_check( nfmpi_put_att_text(ncid_dump,D_part_varid_dump, 'long_name',  &
+               & INT(LEN('Particle diffusion parameter'), &
+               & kind=MPI_OFFSET_KIND),                                        &
+               & 'Particle diffusion parameter')  )
+  CALL pn_check( nfmpi_def_var(ncid_dump, "S_part", PM_NF_FLOAT,0,0,S_part_varid_dump) )
+  CALL pn_check( nfmpi_put_att_text(ncid_dump,S_part_varid_dump, 'long_name',  &
+               & INT(LEN('Particle background stratification parameter'), &
+               & kind=MPI_OFFSET_KIND),                                        &
+               & 'Particle background stratification parameter')  ) 
+  CALL pn_check( nfmpi_def_var(ncid_dump, "R_part", PM_NF_FLOAT,0,0,R_part_varid_dump) )
+  CALL pn_check( nfmpi_put_att_text(ncid_dump,R_part_varid_dump, 'long_name',  &
+               & INT(LEN('Particle scaling coefficient'), &
+               & kind=MPI_OFFSET_KIND),                                        &
+               & 'Particle scaling coefficient')  ) 
   CALL pn_check( nfmpi_def_var(ncid_dump, "istep", NF_int,0,0,istep_varid_dump) )
   CALL pn_check( nfmpi_put_att_text(ncid_dump, istep_varid_dump, 'long_name',&
                & INT(LEN('number of present time step'),kind=MPI_OFFSET_KIND),  &
@@ -119,6 +150,25 @@ SUBROUTINE pn_open_dump
   CALL pn_check( nfmpi_def_var(ncid_dump, "Chem", PM_NF_FLOAT,4,dimids,Chem_varid_dump) )
   CALL pn_check( nfmpi_put_att_text(ncid_dump, Chem_varid_dump, 'long_name',  &
             & INT(LEN('Concentration field'),kind=MPI_OFFSET_KIND),'Concentration field') ) 
+#endif
+#ifdef PARTICLE_FIELD
+  CALL pn_check( nfmpi_def_var(ncid_dump, "Part", PM_NF_FLOAT,4,dimids,Part_varid_dump) )
+  CALL pn_check( nfmpi_put_att_text(ncid_dump, Part_varid_dump, 'long_name',  &
+            & INT(LEN('Particle field'),kind=MPI_OFFSET_KIND),'Particle field') ) 
+  CALL pn_check( nfmpi_def_var(ncid_dump, "upx", PM_NF_FLOAT,4,dimids,upx_varid_dump) )
+  CALL pn_check( nfmpi_put_att_text(ncid_dump, upx_varid_dump, 'long_name',  &
+		    & INT(LEN('x-component of the particle velocity field' ),kind=MPI_OFFSET_KIND), &
+		    &'x-component of the particle velocity field'))
+#ifndef TWO_DIMENSIONAL 
+  CALL pn_check( nfmpi_def_var(ncid_dump, "upy", PM_NF_FLOAT,4,dimids,upy_varid_dump) )
+  CALL pn_check( nfmpi_put_att_text(ncid_dump, upy_varid_dump, 'long_name',  &
+		    & INT(LEN('y-component of the particle velocity field' ),kind=MPI_OFFSET_KIND), &
+		    &'y-component of the particle velocity field'))
+#endif 
+  CALL pn_check( nfmpi_def_var(ncid_dump, "upz", PM_NF_FLOAT,4,dimids,upz_varid_dump) )
+  CALL pn_check( nfmpi_put_att_text(ncid_dump, upz_varid_dump, 'long_name',  &
+		    & INT(LEN('z-component of the particle velocity field' ),kind=MPI_OFFSET_KIND), &
+		    &'z-component of the particle velocity field')) 
 #endif
 
   CALL pn_check( nfmpi_def_var(ncid_dump, "ux", PM_NF_FLOAT,4,dimids,ux_varid_dump) )
@@ -169,6 +219,12 @@ SUBROUTINE pn_open_dump
      CALL pn_check( PM_NFMPI_PUT_VAR_FLOAT(ncid_dump,D_comp_varid_dump,D_comp))
      CALL pn_check( PM_NFMPI_PUT_VAR_FLOAT(ncid_dump,S_therm_varid_dump,S_therm))
      CALL pn_check( PM_NFMPI_PUT_VAR_FLOAT(ncid_dump,S_comp_varid_dump,S_comp))
+     CALL pn_check( PM_NFMPI_PUT_VAR_FLOAT(ncid_dump,T_part_varid_dump,T_part))
+     CALL pn_check( PM_NFMPI_PUT_VAR_FLOAT(ncid_dump,G_part_varid_dump,G_part))
+     CALL pn_check( PM_NFMPI_PUT_VAR_FLOAT(ncid_dump,Dv_part_varid_dump,Dv_part))
+     CALL pn_check( PM_NFMPI_PUT_VAR_FLOAT(ncid_dump,D_part_varid_dump,D_part))
+     CALL pn_check( PM_NFMPI_PUT_VAR_FLOAT(ncid_dump,S_part_varid_dump,S_part))
+     CALL pn_check( PM_NFMPI_PUT_VAR_FLOAT(ncid_dump,R_part_varid_dump,R_part))
      CALL pn_check( nfmpi_put_var_int(ncid_dump,ri_varid_dump,(/ (i,i=0,1) /)))
      CALL pn_check( PM_NFMPI_PUT_VAR_FLOAT(ncid_dump,kx_varid_dump,kx))
 #ifndef TWO_DIMENSIONAL

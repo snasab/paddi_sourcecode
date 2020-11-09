@@ -1,8 +1,8 @@
 ! +-----------------------------------------------------------------------------+
-! | The folowing subroutine writes the fields (Temp,Chem,u,curl u)(x=0,y=0,z)   |
+! | The folowing subroutine writes the fields (Temp,Chem,Part,u,curl u)(x=0,y=0,z)   |
 ! | to a disk file.                                                             |
 ! +-----------------------------------------------------------------------------+
-SUBROUTINE wrtout_single_profile(u,Temp,Chem,istep,dt,t)
+SUBROUTINE wrtout_single_profile(u,Temp,Chem,Part,istep,dt,t)
   USE defprecision_module
   USE state_module
   USE message_passing_module, ONLY : myid
@@ -11,7 +11,7 @@ SUBROUTINE wrtout_single_profile(u,Temp,Chem,istep,dt,t)
   &                             mysx_spec,mysy_spec
   IMPLICIT NONE
   TYPE(velocity)   :: u
-  TYPE(buoyancy)   :: Temp,CHem
+  TYPE(buoyancy)   :: Temp,Chem,Part
   INTEGER(kind=ki) :: istep
   REAL(kind=kr)    :: dt,t
   INTEGER(kind=ki) :: nprofile,ncount
@@ -25,6 +25,9 @@ SUBROUTINE wrtout_single_profile(u,Temp,Chem,istep,dt,t)
 #endif
 #if defined(CHEMICAL_FIELD)
   nprofile = nprofile + 1
+#endif
+#if defined(PARTICLE_FIELD)
+  nprofile = nprofile + 7
 #endif
 
   
@@ -47,6 +50,15 @@ SUBROUTINE wrtout_single_profile(u,Temp,Chem,istep,dt,t)
 #endif
 #if defined(CHEMICAL_FIELD)
      local_z(ncount+1,:)=Chem%phys(0,0,:)
+#endif
+#if defined(PARTICLE_FIELD)
+     local_z(ncount+1,:)=Part%phys(0,0,:)
+     local_z(ncount+2,:)=up%phys(0,0,:,1)
+     local_z(ncount+3,:)=up%phys(0,0,:,2)
+     local_z(ncount+4,:)=up%phys(0,0,:,3)
+     local_z(ncount+5,:)=up%curl(0,0,:,1)
+     local_z(ncount+6,:)=up%curl(0,0,:,2)
+     local_z(ncount+7,:)=up%curl(0,0,:,3)
 #endif
   ENDIF
 

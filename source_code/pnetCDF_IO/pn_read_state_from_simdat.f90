@@ -1,7 +1,7 @@
 ! This subroutine reads the data from the last step saved in the netcdf simulation
 ! data file. It is assumed that pn_read_size_and_pa_from_simdat had already been
 ! called.
-SUBROUTINE pn_read_state_from_simdat(u,Temp,Chem,istep,t,dt)
+SUBROUTINE pn_read_state_from_simdat(u,Temp,Chem,up,Part,istep,t,dt)
   USE defprecision_module
   USE state_module, ONLY : velocity,buoyancy
   USE parameter_module
@@ -14,8 +14,8 @@ SUBROUTINE pn_read_state_from_simdat(u,Temp,Chem,istep,t,dt)
   IMPLICIT NONE
   INCLUDE "mpif.h"
 #endif
-  TYPE(velocity)    :: u
-  TYPE(buoyancy)    :: Temp,Chem
+  TYPE(velocity)    :: u,up
+  TYPE(buoyancy)    :: Temp,Chem,Part
   INTEGER(kind=ki)  :: istep
   INTEGER (kind=MPI_OFFSET_KIND) :: number_of_last_saved_step_simdat
   REAL (kind=kr)    :: t,dt
@@ -60,7 +60,19 @@ SUBROUTINE pn_read_state_from_simdat(u,Temp,Chem,istep,t,dt)
                & starts, counts,u%phys(:,:,:,vec_y))                        )
 #endif
   CALL pn_check( PM_NFMPI_GET_VARA_FLOAT_ALL(ncid_simdat, uz_varid_simdat,    &
-               & starts, counts,u%phys(:,:,:,vec_z))                        )
+               & starts, counts,u%phys(:,:,:,vec_z))                        ) 
+#ifdef PARTICLE_FIELD
+  CALL pn_check( PM_NFMPI_GET_VARA_FLOAT_ALL(ncid_simdat, Part_varid_simdat,    &
+               & starts, counts,Part%phys)                                    )
+  CALL pn_check( PM_NFMPI_GET_VARA_FLOAT_ALL(ncid_simdat, upx_varid_simdat,    &
+               & starts, counts,up%phys(:,:,:,vec_x))                        )
+#ifndef TWO_DIMENSIONAL
+  CALL pn_check( PM_NFMPI_GET_VARA_FLOAT_ALL(ncid_simdat, upy_varid_simdat,    &
+               & starts, counts,up%phys(:,:,:,vec_y))                        )
+#endif
+  CALL pn_check( PM_NFMPI_GET_VARA_FLOAT_ALL(ncid_simdat, upz_varid_simdat,    &
+               & starts, counts,up%phys(:,:,:,vec_z))                        )
+#endif
   ! close dump file
   CALL pn_check( nfmpi_close(ncid_simdat) )
 END SUBROUTINE pn_read_state_from_simdat

@@ -40,9 +40,13 @@ MODULE pnetCDF_IO_module
   INTEGER  :: B_therm_varid_simdat,B_comp_varid_simdat
   INTEGER  :: D_visc_varid_simdat,D_therm_varid_simdat,D_comp_varid_simdat
   INTEGER  :: S_therm_varid_simdat,S_comp_varid_simdat
+  INTEGER  :: T_part_varid_simdat,G_part_varid_simdat,D_part_varid_simdat,S_part_varid_simdat
+  INTEGER  :: R_part_varid_simdat, Dv_part_varid_simdat
   INTEGER  :: Temp_varid_simdat
   INTEGER  :: Chem_varid_simdat
+  INTEGER  :: Part_varid_simdat
   INTEGER  :: ux_varid_simdat,uy_varid_simdat,uz_varid_simdat
+  INTEGER  :: upx_varid_simdat,upy_varid_simdat,upz_varid_simdat
   INTEGER  :: Gammax_varid_simdat,Gammay_varid_simdat,Gammaz_varid_simdat
   INTEGER  :: CFL_varid_simdat,dt_varid_simdat,dt_max_varid_simdat,dt_initial_varid_simdat
 
@@ -53,12 +57,16 @@ MODULE pnetCDF_IO_module
   INTEGER  :: B_therm_varid_dump,B_comp_varid_dump
   INTEGER  :: D_visc_varid_dump,D_therm_varid_dump,D_comp_varid_dump
   INTEGER  :: S_therm_varid_dump,S_comp_varid_dump
+  INTEGER  :: T_part_varid_dump,G_part_varid_dump,D_part_varid_dump,S_part_varid_dump
+  INTEGER  :: R_part_varid_dump, Dv_part_varid_dump
   INTEGER  :: istep_varid_dump,time_varid_dump
   INTEGER  :: dt_varid_dump
   INTEGER  :: ri_varid_dump,kx_varid_dump,ky_varid_dump,kz_varid_dump
   INTEGER  :: Temp_varid_dump
   INTEGER  :: Chem_varid_dump
+  INTEGER  :: Part_varid_dump
   INTEGER  :: ux_varid_dump,uy_varid_dump,uz_varid_dump
+  INTEGER  :: upx_varid_dump,upy_varid_dump,upz_varid_dump
 
 CONTAINS
 
